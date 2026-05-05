@@ -15,7 +15,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
 from rest_framework import routers
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+import os
 from . import views
 
 router = routers.DefaultRouter()
@@ -25,8 +30,26 @@ router.register(r'activities', views.ActivityViewSet)
 router.register(r'workouts', views.WorkoutViewSet)
 router.register(r'leaderboard', views.LeaderboardViewSet)
 
+
+@api_view(['GET'])
+def api_root_with_env(request, format=None):
+    codespace_name = os.environ.get('CODESPACE_NAME')
+    if codespace_name:
+        base_url = f"https://{codespace_name}-8000.app.github.dev/api"
+    else:
+        # fallback to localhost for local development
+        base_url = "http://localhost:8000/api"
+    return Response({
+        'users': f'{base_url}/users/',
+        'teams': f'{base_url}/teams/',
+        'activities': f'{base_url}/activities/',
+        'workouts': f'{base_url}/workouts/',
+        'leaderboard': f'{base_url}/leaderboard/',
+    })
+
 urlpatterns = [
+    path('', lambda request: redirect('/api/', permanent=False)),
     path('admin/', admin.site.urls),
-    path('', views.api_root, name='api_root'),
-    path('', include(router.urls)),
+    path('api/', api_root_with_env, name='api_root'),
+    path('api/', include(router.urls)),
 ]
